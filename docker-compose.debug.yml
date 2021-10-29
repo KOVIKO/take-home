@@ -1,0 +1,61 @@
+version: '3.4'
+
+services:
+  take-home:
+    container_name: take-home
+    depends_on:
+      - db
+      - prisma-migrate
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    environment:
+      NODE_ENV: development
+    env_file:
+      - .env
+    ports:
+      - 3000:3000
+      - 9229:9229
+    volumes:
+      - .:/usr/src/app
+      - /usr/src/app/node_modules
+    command: ["npm", "run", "start:debug"]
+
+  prisma-migrate:
+    container_name: prisma-migrate
+    depends_on:
+      - db
+    build:
+      context: prisma
+      dockerfile: Dockerfile.migrate
+    env_file:
+      - .env
+
+  # prisma-studio:
+  #   container_name: prisma-studio
+  #   depends_on:
+  #     - db
+  #     - prisma-migrate
+  #   ports:
+  #     - 5555:5555
+  #   build:
+  #     context: prisma
+  #     dockerfile: Dockerfile
+  #   env_file:
+  #     - .env
+  #   volumes:
+  #     - /app/prisma
+
+  db:
+    container_name: db
+    image: postgres:14-alpine
+    restart: always
+    ports:
+      - 5432:5432
+    env_file:
+      - .env.database
+    volumes:
+      - data:/var/lib/postgres
+
+volumes:
+  data:
