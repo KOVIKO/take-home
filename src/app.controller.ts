@@ -11,6 +11,7 @@ export class AppController {
   static readonly healthStatusMessages: { [key: string]: HealthStatusMessage } = {
     bad: HealthStatusMessage.bad,
     good: HealthStatusMessage.good,
+    recovered: HealthStatusMessage.recovered,
   };
 
   constructor(private readonly appService: AggregateService) {}
@@ -34,7 +35,15 @@ export class AppController {
     type: String,
   })
   async getHealth(): Promise<HealthStatusMessage> {
-    const aggregate = await this.appService.getAggregate(1);
-    return aggregate.avg < 160 ? AppController.healthStatusMessages.bad : AppController.healthStatusMessages.good;
+    const oldAggregate = await this.appService.getAggregate(1, 1);
+    const currentAggregate = await this.appService.getAggregate(1);
+
+    if (oldAggregate.avg < 160 && currentAggregate.avg >= 160) {
+      return AppController.healthStatusMessages.recovered;
+    }
+
+    return currentAggregate.avg < 160
+      ? AppController.healthStatusMessages.bad
+      : AppController.healthStatusMessages.good;
   }
 }

@@ -21,9 +21,10 @@ export class AggregateService {
   /**
    * Generate aggregated values of the altitude across the specified amount of passed minutes
    * @param minutesToCheck Amount of minutes to consider
+   * @param offset The offset of minutes to consider (eg. 1 means check `minutesToCheck` ago as of one minute ago)
    * @returns Aggregated values of the altitude
    */
-  async getAggregate(minutesToCheck: number): Promise<Aggregate> {
+  async getAggregate(minutesToCheck: number, offset = 0): Promise<Aggregate> {
     // Use prisma to aggregate the minimum, maximum, and average altitudes over the timespan
     const aggregate = await this.prisma.reading.aggregate({
       _avg: { altitude: true }, // Average
@@ -31,8 +32,8 @@ export class AggregateService {
       _min: { altitude: true }, // Minimum
       where: {
         time: {
-          gte: this.getTimeConstraint(minutesToCheck), // From X minutes ago onward
-          lte: new Date(), // Don't consider any future values (shouldn't be an issue, but just in case...)
+          gte: this.getTimeConstraint(minutesToCheck + offset), // From X + Y minutes ago
+          lte: this.getTimeConstraint(offset), // To Y minutes ago
         },
       },
     });

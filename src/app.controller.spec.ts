@@ -42,30 +42,80 @@ describe('AppController', () => {
   });
 
   describe('/health', () => {
-    it('should call the service for a 1-minute aggregate', () => {
+    it('should call the service for a 2 aggregates', async () => {
       jest.spyOn(appService, 'getAggregate');
 
       expect(appService.getAggregate).not.toHaveBeenCalled();
-      appController.getHealth();
-      expect(appService.getAggregate).toHaveBeenCalledWith(1);
+      await appController.getHealth();
+      expect(appService.getAggregate).toHaveBeenCalledTimes(2);
     });
 
-    test.each([-100, 0, 100, 159])('should result in a warning if the average altitude is %i', async (altitude) => {
-      const aggregate = new Aggregate();
-      aggregate.avg = altitude;
+    test.each([-100, 0, 100, 159])(
+      'should result in a warning if the average altitude is %i and the old altitude is 160',
+      async (altitude) => {
+        const goodAggregate = new Aggregate();
+        const aggregate = new Aggregate();
 
-      jest.spyOn(appService, 'getAggregate').mockImplementation(() => Promise.resolve(aggregate));
+        goodAggregate.avg = 160;
+        aggregate.avg = altitude;
 
-      expect(await appController.getHealth()).toEqual('WARNING: RAPID ORBITAL DECAY IMMINENT');
-    });
+        jest
+          .spyOn(appService, 'getAggregate')
+          .mockImplementation((_, x) => Promise.resolve(x ? goodAggregate : aggregate));
 
-    test.each([160, 161, 1800, 9999])('should result in "A-OK" if the average altitude is %i', async (altitude) => {
-      const aggregate = new Aggregate();
-      aggregate.avg = altitude;
+        expect(await appController.getHealth()).toEqual('WARNING: RAPID ORBITAL DECAY IMMINENT');
+      },
+    );
 
-      jest.spyOn(appService, 'getAggregate').mockImplementation(() => Promise.resolve(aggregate));
+    test.each([-100, 0, 100, 159])(
+      'should result in a warning if the average altitude is %i and the old altitude is 159',
+      async (altitude) => {
+        const goodAggregate = new Aggregate();
+        const aggregate = new Aggregate();
 
-      expect(await appController.getHealth()).toEqual('Altitude is A-OK');
-    });
+        goodAggregate.avg = 159;
+        aggregate.avg = altitude;
+
+        jest
+          .spyOn(appService, 'getAggregate')
+          .mockImplementation((_, x) => Promise.resolve(x ? goodAggregate : aggregate));
+
+        expect(await appController.getHealth()).toEqual('WARNING: RAPID ORBITAL DECAY IMMINENT');
+      },
+    );
+
+    test.each([160, 161, 1800, 9999])(
+      'should result in "A-OK" if the average altitude is %i and the old altitude is 160',
+      async (altitude) => {
+        const goodAggregate = new Aggregate();
+        const aggregate = new Aggregate();
+
+        goodAggregate.avg = 160;
+        aggregate.avg = altitude;
+
+        jest
+          .spyOn(appService, 'getAggregate')
+          .mockImplementation((_, x) => Promise.resolve(x ? goodAggregate : aggregate));
+
+        expect(await appController.getHealth()).toEqual('Altitude is A-OK');
+      },
+    );
+
+    test.each([160, 161, 1800, 9999])(
+      'should result in "Sustained" if the average altitude is %i and the old altitude is 159',
+      async (altitude) => {
+        const goodAggregate = new Aggregate();
+        const aggregate = new Aggregate();
+
+        goodAggregate.avg = 159;
+        aggregate.avg = altitude;
+
+        jest
+          .spyOn(appService, 'getAggregate')
+          .mockImplementation((_, x) => Promise.resolve(x ? goodAggregate : aggregate));
+
+        expect(await appController.getHealth()).toEqual('Sustained Low Earth Orbit Resumed');
+      },
+    );
   });
 });
